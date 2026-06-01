@@ -1,25 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-
-// Locate our database path
-const FILE_PATH = path.join(process.cwd(), 'database.json');
-
-// Initialize memory structures so serverless functions can read/write in live RAM
+// Explicit global in-memory tracking arrays completely detached from any disk file
 if (!(globalThis as any)._memOrgs) (globalThis as any)._memOrgs = [];
 if (!(globalThis as any)._memUsers) (globalThis as any)._memUsers = [];
 if (!(globalThis as any)._memProds) (globalThis as any)._memProds = [];
-
-// Fallback loader: If our memory context is cold, attempt a single safe read from the template file
-try {
-  if ((globalThis as any)._memOrgs.length === 0 && fs.existsSync(FILE_PATH)) {
-    const raw = JSON.parse(fs.readFileSync(FILE_PATH, 'utf8'));
-    (globalThis as any)._memOrgs = raw.organizations || [];
-    (globalThis as any)._memUsers = raw.users || [];
-    (globalThis as any)._memProds = raw.products || [];
-  }
-} catch (e) {
-  console.log("Running in pure detached memory mode");
-}
 
 export const db = {
   organization: {
