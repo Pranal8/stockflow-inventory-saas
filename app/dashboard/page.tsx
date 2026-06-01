@@ -1,112 +1,90 @@
 'use client';
-
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-interface LowStockItem {
-  id: string;
-  name: string;
-  sku: string;
-  quantityOnHand: number;
-  threshold: number;
-}
-
-interface DashboardData {
-  totalProducts: number;
-  totalInventoryCount: number;
-  lowStockItems: LowStockItem[];
-}
-
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/dashboard')
       .then((res) => res.json())
-      .then((data) => {
-        setData(data);
+      .then((resData) => {
+        setData(resData);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
+      .catch((err) => console.error(err));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-gray-500 font-medium">Loading metrics view...</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-8 text-slate-400">Aggregating Stockflow Metrics...</div>;
+
+  const { metrics, lowStockItems, organizationName, globalThreshold } = data;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Basic Navigation Banner */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-gray-800 tracking-tight">StockFlow Dashboard</h1>
-        <div className="flex space-x-4">
-          <Link href="/dashboard" className="text-sm font-semibold text-blue-600">Dashboard</Link>
-          <Link href="/products" className="text-sm font-medium text-gray-600 hover:text-gray-900">Products</Link>
-          <Link href="/settings" className="text-sm font-medium text-gray-600 hover:text-gray-900">Settings</Link>
+    <div className="max-w-6xl p-8 mx-auto space-y-8">
+      {/* Header Banner */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-white">{organizationName} Hub</h1>
+          <p className="text-sm text-slate-400">Real-time tenant analytics overview. Global threshold flag: <span className="text-indigo-400 font-semibold">{globalThreshold} units</span>.</p>
         </div>
-      </nav>
+        <Link href="/products" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors">
+          Manage Inventory
+        </Link>
+      </div>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto p-6 space-y-8">
+      {/* Grid KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tracked SKUs</p>
+          <p className="text-4xl font-bold text-white">{metrics.totalProducts}</p>
+        </div>
+        <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Items On-Hand</p>
+          <p className="text-4xl font-bold text-emerald-400">{metrics.totalInventoryValue}</p>
+        </div>
+        <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Low Stock Alerts</p>
+          <p className="text-4xl font-bold text-rose-500">{metrics.lowStockCount}</p>
+        </div>
+      </div>
+
+      {/* Low Stock Watchlist Component */}
+      <div className="p-6 rounded-xl bg-slate-900 border border-slate-800 space-y-4">
+        <h2 className="text-xl font-bold text-white">Critical Low Stock Alerts</h2>
+        <p className="text-sm text-slate-400">Items below or equal to current safe thresholds that require immediate reordering.</p>
         
-        {/* Metric Cards Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Product Types</p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{data?.totalProducts ?? 0}</p>
+        {lowStockItems.length === 0 ? (
+          <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 text-center text-slate-500 text-sm">
+            🎉 Solid work! All stock units are currently sitting above replenishment levels.
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Total Units In Stock</p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{data?.totalInventoryCount ?? 0}</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-slate-800">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-slate-950 text-slate-400 uppercase text-xs font-semibold border-b border-slate-800">
+                  <th className="p-3">Product Name</th>
+                  <th className="p-3">SKU Identifier</th>
+                  <th className="p-3 text-right">Qty Remaining</th>
+                  <th className="p-3 text-right">Trigger Target</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800 text-slate-300">
+                {lowStockItems.map((item: any) => (
+                  <tr key={item.id} className="hover:bg-slate-950 transition-colors">
+                    <td className="p-3 font-medium text-white">{item.name}</td>
+                    <td className="p-3 font-mono text-slate-400">{item.sku}</td>
+                    <td className="p-3 text-right font-bold text-rose-400">{item.quantityOnHand}</td>
+                    <td className="p-3 text-right text-slate-500">
+                      {item.lowStockLimit !== null ? `${item.lowStockLimit} (Custom)` : `${globalThreshold} (Global)`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        {/* Low Stock Watch Section */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
-            <h3 className="text-lg font-bold text-gray-900">Low Stock Alert Panel</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Products requiring immediate reordering items.</p>
-          </div>
-          <div className="p-6">
-            {data?.lowStockItems && data.lowStockItems.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-500">
-                  <thead className="bg-gray-50 text-xs text-gray-700 uppercase font-semibold">
-                    <tr>
-                      <th className="px-4 py-3">Product Name</th>
-                      <th className="px-4 py-3">SKU Code</th>
-                      <th className="px-4 py-3 text-right">Available Stock</th>
-                      <th className="px-4 py-3 text-right">Minimum Alert Level</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.lowStockItems.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
-                        <td className="px-4 py-3.5 font-medium text-gray-900">{item.name}</td>
-                        <td className="px-4 py-3.5 font-mono text-xs">{item.sku}</td>
-                        <td className="px-4 py-3.5 text-right font-semibold text-red-600 bg-red-50/50 rounded-md">{item.quantityOnHand} units</td>
-                        <td className="px-4 py-3.5 text-right text-gray-600">{item.threshold} units</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-sm text-gray-400">
-                ✅ All products safely above their low-stock safety lines.
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
+        )}
+      </div>
     </div>
   );
 }

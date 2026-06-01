@@ -9,11 +9,10 @@ export async function GET() {
   }
 
   try {
+    // 1. Fetch organization details to get the dynamic global threshold
     const org = await db.organization.findUnique({
       where: { id: session.organizationId },
-      select: { defaultThreshold: true },
     });
-
     const globalThreshold = org?.defaultThreshold ?? 5;
 
     // 2. Fetch all products belonging to this tenant
@@ -21,27 +20,29 @@ export async function GET() {
       where: { organizationId: session.organizationId },
     });
 
+    // 3. Compute metric aggregations
     const totalProducts = products.length;
-    const totalInventoryCount = products.reduce((sum:any, p:any) => sum + p.quantityOnHand, 0);
+    const totalInventoryValue = products.reduce((acc: number, p: any) => acc + (p.quantityOnHand || 0), 0);
 
-    const lowStockItems = products.filter((p:any) => {
-      const threshold = p.lowStockLimit !== null ? p.lowStockLimit : globalThreshold;
-      return p.quantityOnHand <= threshold;
-    }).map((p:any) => ({
-      id: p.id,
-      name: p.name,
-      sku: p.sku,
-      quantityOnHand: p.quantityOnHand,
-      threshold: p.lowStockLimit !== null ? p.lowStockLimit : globalThreshold,
-    }));
+    // 4. Filter products matching low stock criteria
+    const lowStockItems = products.filter((p: any) => {
+      // Use specific product threshold limit override if set, otherwise fall back to global organization threshold
+      const activeThreshold = p.lowStockLimit !== null && p.lowStockLimit !== undefined ? p.lowStockLimit : globalThreshold;
+      return p.quantityOnHand <= activeThreshold;
+    });
 
     return NextResponse.json({
-      totalProducts,
-      totalInventoryCount,
+      organizationName: org?.name || 'Your Store',
+      globalThreshold,
+      metrics: {
+        totalProducts,
+        totalInventoryValue,
+        lowStockCount: lowStockItems.length,
+      },
       lowStockItems,
     });
   } catch (error) {
-    console.error('Dashboard analytical fetch failure:', error);
+    console.error('Dashboard aggregation error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
