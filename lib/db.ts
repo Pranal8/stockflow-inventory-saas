@@ -1,73 +1,65 @@
-import fs from 'fs';
-import path from 'path';
+// Define global in-memory tables that bypass Vercel's read-only disk restriction
+const globalStorage = globalThis as unknown as {
+  _dbOrganizations: any[];
+  _dbUsers: any[];
+  _dbProducts: any[];
+};
 
-const FILE_PATH = path.join(process.cwd(), 'database.json');
+// Initialize in-memory arrays if they don't exist in this execution context
+if (!globalStorage._dbOrganizations) globalStorage._dbOrganizations = [];
+if (!globalStorage._dbUsers) globalStorage._dbUsers = [];
+if (!globalStorage._dbProducts) globalStorage._dbProducts = [];
 
-if (!fs.existsSync(FILE_PATH)) {
-  fs.writeFileSync(FILE_PATH, JSON.stringify({ organizations: [], users: [], products: [] }, null, 2));
-}
-
-function readData() {
-  return JSON.parse(fs.readFileSync(FILE_PATH, 'utf8'));
-}
-
-function writeData(data: any) {
-  fs.writeFileSync(FILE_PATH, JSON.stringify(data, null, 2));
-}
+// Helper functions that access our rapid, live-RAM storage layer
+function getOrganizations() { return globalStorage._dbOrganizations; }
+function getUsers() { return globalStorage._dbUsers; }
+function getProducts() { return globalStorage._dbProducts; }
 
 export const db = {
   organization: {
     create: async ({ data }: any) => {
-      const store = readData();
-      const newOrg = { id: 'org_' + Math.random().toString(36).substr(2, 9), defaultThreshold: data.defaultThreshold || 5, ...data };
-      store.organizations.push(newOrg);
-      writeData(store);
+      const newOrg = { 
+        id: 'org_' + Math.random().toString(36).substr(2, 9), 
+        defaultThreshold: data.defaultThreshold || 5, 
+        ...data 
+      };
+      globalStorage._dbOrganizations.push(newOrg);
       return newOrg;
     },
     findUnique: async ({ where }: any) => {
-      const store = readData();
-      return store.organizations.find((o: any) => o.id === where.id) || null;
+      return getOrganizations().find((o: any) => o.id === where.id) || null;
     },
     update: async ({ where, data }: any) => {
-      const store = readData();
-      const idx = store.organizations.findIndex((o: any) => o.id === where.id);
+      const orgs = getOrganizations();
+      const idx = orgs.findIndex((o: any) => o.id === where.id);
       if (idx === -1) throw new Error('Not found');
-      store.organizations[idx] = { ...store.organizations[idx], ...data, defaultThreshold: parseInt(data.defaultThreshold) };
-      writeData(store);
-      return store.organizations[idx];
+      orgs[idx] = { ...orgs[idx], ...data, defaultThreshold: parseInt(data.defaultThreshold) };
+      return orgs[idx];
     }
   },
   user: {
     findUnique: async ({ where }: any) => {
-      const store = readData();
-      return store.users.find((u: any) => u.email === where.email) || null;
+      return getUsers().find((u: any) => u.email === where.email) || null;
     },
     create: async ({ data }: any) => {
-      const store = readData();
       const newUser = { id: 'usr_' + Math.random().toString(36).substr(2, 9), ...data };
-      store.users.push(newUser);
-      writeData(store);
+      globalStorage._dbUsers.push(newUser);
       return newUser;
     }
   },
   product: {
     findMany: async ({ where }: any) => {
-      const store = readData();
-      let results = store.products.filter((p: any) => p.organizationId === where.organizationId);
-      return results;
+      return getProducts().filter((p: any) => p.organizationId === where.organizationId);
     },
     findUnique: async ({ where }: any) => {
-      const store = readData();
       const targetSku = where.organizationId_sku ? where.organizationId_sku.sku : where.sku;
       const targetOrg = where.organizationId_sku ? where.organizationId_sku.organizationId : where.organizationId;
-      return store.products.find((p: any) => p.sku === targetSku && p.organizationId === targetOrg) || null;
+      return getProducts().find((p: any) => p.sku === targetSku && p.organizationId === targetOrg) || null;
     },
     findFirst: async ({ where }: any) => {
-      const store = readData();
-      return store.products.find((p: any) => p.id === where.id && p.organizationId === where.organizationId) || null;
+      return getProducts().find((p: any) => p.id === where.id && p.organizationId === where.organizationId) || null;
     },
     create: async ({ data }: any) => {
-      const store = readData();
       const newProd = {
         id: 'prod_' + Math.random().toString(36).substr(2, 9),
         createdAt: new Date().toISOString(),
@@ -77,29 +69,25 @@ export const db = {
         sellingPrice: data.sellingPrice ? parseFloat(data.sellingPrice) : null,
         lowStockLimit: data.lowStockLimit ? parseInt(data.lowStockLimit) : null,
       };
-      store.products.push(newProd);
-      writeData(store);
+      globalStorage._dbProducts.push(newProd);
       return newProd;
     },
     update: async ({ where, data }: any) => {
-      const store = readData();
-      const idx = store.products.findIndex((p: any) => p.id === where.id);
+      const prods = getProducts();
+      const idx = prods.findIndex((p: any) => p.id === where.id);
       if (idx === -1) throw new Error('Not found');
-      store.products[idx] = {
-        ...store.products[idx],
+      prods[idx] = {
+        ...prods[idx],
         ...data,
-        quantityOnHand: data.quantityOnHand !== undefined ? parseInt(data.quantityOnHand) : store.products[idx].quantityOnHand,
-        costPrice: data.costPrice !== undefined ? (data.costPrice ? parseFloat(data.costPrice) : null) : store.products[idx].costPrice,
-        sellingPrice: data.sellingPrice !== undefined ? (data.sellingPrice ? parseFloat(data.sellingPrice) : null) : store.products[idx].sellingPrice,
-        lowStockLimit: data.lowStockLimit !== undefined ? (data.lowStockLimit ? parseInt(data.lowStockLimit) : null) : store.products[idx].lowStockLimit,
+        quantityOnHand: data.quantityOnHand !== undefined ? parseInt(data.quantityOnHand) : prods[idx].quantityOnHand,
+        costPrice: data.costPrice !== undefined ? (data.costPrice ? parseFloat(data.costPrice) : null) : prods[idx].costPrice,
+        sellingPrice: data.sellingPrice !== undefined ? (data.sellingPrice ? parseFloat(data.sellingPrice) : null) : prods[idx].sellingPrice,
+        lowStockLimit: data.lowStockLimit !== undefined ? (data.lowStockLimit ? parseInt(data.lowStockLimit) : null) : prods[idx].lowStockLimit,
       };
-      writeData(store);
-      return store.products[idx];
+      return prods[idx];
     },
     delete: async ({ where }: any) => {
-      const store = readData();
-      store.products = store.products.filter((p: any) => p.id !== where.id);
-      writeData(store);
+      globalStorage._dbProducts = globalStorage._dbProducts.filter((p: any) => p.id !== where.id);
       return { success: true };
     }
   },
