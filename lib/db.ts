@@ -1,7 +1,25 @@
-// Explicit memory buckets completely separated from disk routes
+import fs from 'fs';
+import path from 'path';
+
+// Locate our database path
+const FILE_PATH = path.join(process.cwd(), 'database.json');
+
+// Initialize memory structures so serverless functions can read/write in live RAM
 if (!(globalThis as any)._memOrgs) (globalThis as any)._memOrgs = [];
 if (!(globalThis as any)._memUsers) (globalThis as any)._memUsers = [];
 if (!(globalThis as any)._memProds) (globalThis as any)._memProds = [];
+
+// Fallback loader: If our memory context is cold, attempt a single safe read from the template file
+try {
+  if ((globalThis as any)._memOrgs.length === 0 && fs.existsSync(FILE_PATH)) {
+    const raw = JSON.parse(fs.readFileSync(FILE_PATH, 'utf8'));
+    (globalThis as any)._memOrgs = raw.organizations || [];
+    (globalThis as any)._memUsers = raw.users || [];
+    (globalThis as any)._memProds = raw.products || [];
+  }
+} catch (e) {
+  console.log("Running in pure detached memory mode");
+}
 
 export const db = {
   organization: {
@@ -15,8 +33,7 @@ export const db = {
       return newOrg;
     },
     findUnique: async ({ where }: any) => {
-      const list = (globalThis as any)._memOrgs;
-      return list.find((o: any) => o.id === where.id) || null;
+      return (globalThis as any)._memOrgs.find((o: any) => o.id === where.id) || null;
     },
     update: async ({ where, data }: any) => {
       const list = (globalThis as any)._memOrgs;
@@ -30,8 +47,7 @@ export const db = {
   },
   user: {
     findUnique: async ({ where }: any) => {
-      const list = (globalThis as any)._memUsers;
-      return list.find((u: any) => u.email === where.email) || null;
+      return (globalThis as any)._memUsers.find((u: any) => u.email === where.email) || null;
     },
     create: async ({ data }: any) => {
       const newUser = { 
@@ -46,8 +62,7 @@ export const db = {
   },
   product: {
     findMany: async ({ where }: any) => {
-      const list = (globalThis as any)._memProds;
-      return list.filter((p: any) => p.organizationId === where.organizationId);
+      return (globalThis as any)._memProds.filter((p: any) => p.organizationId === where.organizationId);
     },
     findUnique: async ({ where }: any) => {
       const list = (globalThis as any)._memProds;
@@ -56,8 +71,7 @@ export const db = {
       return list.find((p: any) => p.sku === targetSku && p.organizationId === targetOrg) || null;
     },
     findFirst: async ({ where }: any) => {
-      const list = (globalThis as any)._memProds;
-      return list.find((p: any) => p.id === where.id && p.organizationId === where.organizationId) || null;
+      return (globalThis as any)._memProds.find((p: any) => p.id === where.id && p.organizationId === where.organizationId) || null;
     },
     create: async ({ data }: any) => {
       const newProd = {
