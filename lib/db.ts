@@ -1,4 +1,4 @@
-// Explicit global in-memory tracking arrays completely detached from any disk file
+// A pure runtime memory database fallback that coordinates with frontend data payloads
 if (!(globalThis as any)._memOrgs) (globalThis as any)._memOrgs = [];
 if (!(globalThis as any)._memUsers) (globalThis as any)._memUsers = [];
 if (!(globalThis as any)._memProds) (globalThis as any)._memProds = [];
