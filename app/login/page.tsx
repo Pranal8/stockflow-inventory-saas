@@ -28,7 +28,6 @@ export default function LoginPage() {
         throw new Error(data.error || 'Invalid credentials');
       }
 
-      // Secure HTTP-only cookie is set by backend, redirect directly to dashboard
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);

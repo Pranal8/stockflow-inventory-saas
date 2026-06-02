@@ -9,7 +9,6 @@ export async function getSessionContext() {
       return JSON.parse(sessionCookie.value);
     }
     
-    // Ultimate safety default object if page loads cold
     return {
       userId: 'usr_evaluator',
       email: 'guest@evaluation.com',

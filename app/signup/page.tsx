@@ -19,7 +19,6 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
 
-    // Form confirmation validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -44,7 +43,6 @@ export default function SignupPage() {
         throw new Error(data.error || 'Something went wrong');
       }
 
-      // Registration successful, send to login page
       router.push('/login');
     } catch (err: any) {
       setError(err.message);

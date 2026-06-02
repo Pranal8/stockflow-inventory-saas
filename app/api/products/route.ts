@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionContext } from '@/lib/auth';
 
-// GET: Fetch all products for the logged-in user's organization
 export async function GET() {
   const session = await getSessionContext();
   if (!session) {
@@ -21,7 +20,6 @@ export async function GET() {
   }
 }
 
-// POST: Create a new product scoped to the organization
 export async function POST(request: Request) {
   const session = await getSessionContext();
   if (!session) {
@@ -53,7 +51,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create the product record
     const newProduct = await db.product.create({
       data: {
         organizationId: session.organizationId,

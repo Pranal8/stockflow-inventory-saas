@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
     }
 
-    // Dynamic execution allocation
+
     const org = await db.organization.create({ data: { name: organizationName } });
     const user = await db.user.create({
       data: { email, passwordHash: password, organizationId: org.id }
@@ -18,8 +18,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ success: true, user: { email: user.email } }, { status: 201 });
     
-    // Write session tracking vectors directly into dynamic cookies
-    response.cookies.set('mock_session', JSON.stringify({
+   response.cookies.set('mock_session', JSON.stringify({
       userId: user.id,
       email: user.email,
       organizationId: org.id

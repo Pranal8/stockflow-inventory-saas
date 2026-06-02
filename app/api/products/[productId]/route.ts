@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionContext } from '@/lib/auth';
 
-// PUT: Update an existing product
 export async function PUT(request: Request, context: any) {
   const session = await getSessionContext();
   if (!session) {
@@ -10,9 +9,8 @@ export async function PUT(request: Request, context: any) {
   }
 
   try {
-    // Unwrapping the context params explicitly
     const params = await context.params;
-    const productId = params?.productId; // Matches the folder name [productId]
+    const productId = params?.productId; 
 
     if (!productId) {
       return NextResponse.json({ error: 'Missing product ID parameter' }, { status: 400 });
@@ -21,7 +19,6 @@ export async function PUT(request: Request, context: any) {
     const body = await request.json();
     const { name, sku, description, quantityOnHand, costPrice, sellingPrice, lowStockLimit } = body;
 
-    // Enforce tenant isolation
     const existingProduct = await db.product.findFirst({
       where: { id: productId, organizationId: session.organizationId },
     });
@@ -50,7 +47,6 @@ export async function PUT(request: Request, context: any) {
   }
 }
 
-// DELETE: Hard delete a product
 export async function DELETE(request: Request, context: any) {
   const session = await getSessionContext();
   if (!session) {

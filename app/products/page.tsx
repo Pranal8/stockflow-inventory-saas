@@ -24,7 +24,7 @@ export default function ProductsPage() {
   const [error, setError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({
-    id: '', // Used only when tracking an update action
+    id: '', 
     name: '',
     sku: '',
     description: '',
@@ -34,7 +34,6 @@ export default function ProductsPage() {
     lowStockLimit: '',
   });
 
-  // Fetch products scoped to user organization
   const fetchProducts = async () => {
     try {
       const res = await fetch('/api/products');
@@ -51,7 +50,6 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
-  // Handle Create or Update submission
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -81,7 +79,6 @@ export default function ProductsPage() {
     }
   };
 
-  // Safe execution of native hard deletion with dialog check
   const handleDeleteProduct = async (id: string) => {
     if (!confirm('Are you absolutely sure you want to delete this product item permanently?')) return;
 
@@ -223,7 +220,6 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Create / Edit Form Modal Dialog Layer Overlay */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-lg w-full max-h-[90vh] overflow-y-auto">

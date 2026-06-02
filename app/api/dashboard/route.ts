@@ -9,24 +9,19 @@ export async function GET() {
   }
 
   try {
-    // 1. Fetch organization details to get the dynamic global threshold
     const org = await db.organization.findUnique({
       where: { id: session.organizationId },
     });
     const globalThreshold = org?.defaultThreshold ?? 5;
 
-    // 2. Fetch all products belonging to this tenant
     const products = await db.product.findMany({
       where: { organizationId: session.organizationId },
     });
 
-    // 3. Compute metric aggregations
     const totalProducts = products.length;
     const totalInventoryValue = products.reduce((acc: number, p: any) => acc + (p.quantityOnHand || 0), 0);
 
-    // 4. Filter products matching low stock criteria
     const lowStockItems = products.filter((p: any) => {
-      // Use specific product threshold limit override if set, otherwise fall back to global organization threshold
       const activeThreshold = p.lowStockLimit !== null && p.lowStockLimit !== undefined ? p.lowStockLimit : globalThreshold;
       return p.quantityOnHand <= activeThreshold;
     });

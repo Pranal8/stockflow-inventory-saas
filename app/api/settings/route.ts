@@ -10,12 +10,10 @@ export async function GET() {
     const session = await getSessionContext();
     const targetOrgId = session?.organizationId || 'org_demo123';
 
-    // 1. Core memory check
     let org = await db.organization.findUnique({
       where: { id: targetOrgId }
     });
 
-    // 2. Clear out bad state returns or missing elements safely
     if (!org || typeof org !== 'object') {
       org = await db.organization.create({
         data: { 
@@ -26,7 +24,6 @@ export async function GET() {
       } as any);
     }
 
-    // 3. Absolute protection wrapper: If 'org' is somehow still null, build the object manually
     const runtimeConfig = {
       id: org?.id || targetOrgId,
       name: org?.name || "My Store",
@@ -36,7 +33,6 @@ export async function GET() {
     return NextResponse.json(runtimeConfig);
   } catch (error: any) {
     console.error("CRITICAL PRODUCTION SETTINGS ACCIDENT:", error);
-    // Ultimate safety framework so the UI can never receive a 'null' string response
     return NextResponse.json({ 
       id: 'org_demo123', 
       name: "My Store", 
@@ -72,4 +68,4 @@ export async function POST(request: Request) {
   } catch (error: any) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}// Edge-Invalidation-ID: 999
+}
